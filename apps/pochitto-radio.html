@@ -281,7 +281,26 @@
     font: inherit;
   }
 
-  .station:active { transform: translateY(2px); box-shadow: 0 1px 0 #4a4d53, 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8); }
+  .station:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #4a4d53, 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8); }
+
+  /* 公開先で再生できない局 */
+  .station:disabled {
+    cursor: not-allowed;
+    background: linear-gradient(180deg, #6b6e74, #55585e 60%, #4a4d53);
+    box-shadow: 0 3px 0 #2c2e32, 0 5px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+    color: #1c1d20;
+  }
+  .station:disabled .lamp { background: #2c2219; }
+  .station:disabled .ch, .station:disabled .genre { color: #1c1d20; }
+
+  .group h2 .note {
+    margin-left: 10px;
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    text-transform: none;
+    color: var(--lamp);
+  }
   .station:focus-visible, .power:focus-visible { outline: 2px solid var(--fl); outline-offset: 3px; }
 
   .station .lamp {
@@ -370,11 +389,12 @@
 
 <script>
   // ===== 局の一覧(docs/design/03-局の一覧.md と一致させる) =====
+  // blockedOn: その局が再生を断る公開先のドメイン。そのドメインで開かれたときはボタンを押せなくする
   const STATIONS = [
-    { group: 'SomaFM', name: 'Groove Salad',   genre: 'アンビエント / ダウンテンポ', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
-    { group: 'SomaFM', name: 'Drone Zone',     genre: 'ビートのほぼない音響系',       url: 'https://ice2.somafm.com/dronezone-128-mp3' },
-    { group: 'SomaFM', name: 'Deep Space One', genre: 'スペース系の電子音楽',         url: 'https://ice4.somafm.com/deepspaceone-128-mp3' },
-    { group: 'SomaFM', name: 'Beat Blender',   genre: 'ハウス / ダウンテンポ',         url: 'https://ice6.somafm.com/beatblender-128-mp3' },
+    { group: 'SomaFM', name: 'Groove Salad',   genre: 'アンビエント / ダウンテンポ', blockedOn: 'github.io', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
+    { group: 'SomaFM', name: 'Drone Zone',     genre: 'ビートのほぼない音響系',       blockedOn: 'github.io', url: 'https://ice2.somafm.com/dronezone-128-mp3' },
+    { group: 'SomaFM', name: 'Deep Space One', genre: 'スペース系の電子音楽',         blockedOn: 'github.io', url: 'https://ice4.somafm.com/deepspaceone-128-mp3' },
+    { group: 'SomaFM', name: 'Beat Blender',   genre: 'ハウス / ダウンテンポ',         blockedOn: 'github.io', url: 'https://ice6.somafm.com/beatblender-128-mp3' },
     { group: 'Radio Paradise', name: 'Main Mix',   genre: 'ロック・エレクトロニカ・ワールド', url: 'https://stream.radioparadise.com/mp3-192' },
     { group: 'Radio Paradise', name: 'Mellow Mix', genre: '落ち着いた曲中心',               url: 'https://stream.radioparadise.com/mellow-192' },
     { group: 'Radio Paradise', name: 'Rock Mix',   genre: 'ロック中心',                     url: 'https://stream.radioparadise.com/rock-192' },
@@ -403,10 +423,17 @@
   const state = { index: -1, status: 'idle' };
 
   // ===== 局のボタンを作る =====
+  // 開かれているドメインが blockedOn と一致する(またはそのサブドメイン)なら再生できない局とする
+  const isBlocked = (st) => {
+    const host = location.hostname;
+    return !!st.blockedOn && (host === st.blockedOn || host.endsWith('.' + st.blockedOn));
+  };
+
   const stationButtons = [];
   const groupsEl = $('groups');
   let currentGroupEl = null;
   STATIONS.forEach((st, i) => {
+    const blocked = isBlocked(st);
     if (!currentGroupEl || currentGroupEl.dataset.group !== st.group) {
       const section = document.createElement('section');
       section.className = 'group';
@@ -419,6 +446,15 @@
       section.append(h2, currentGroupEl);
       groupsEl.append(section);
     }
+    if (blocked) {
+      const h2 = currentGroupEl.previousElementSibling;
+      if (!h2.querySelector('.note')) {
+        const note = document.createElement('span');
+        note.className = 'note';
+        note.textContent = 'ファイルをダウンロードして開くと聴けます';
+        h2.append(note);
+      }
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'station';
@@ -426,7 +462,11 @@
     btn.innerHTML = '<span class="lamp"></span><span class="ch"></span><span class="name"></span><span class="genre"></span>';
     btn.querySelector('.ch').textContent = 'CH' + String(i + 1).padStart(2, '0');
     btn.querySelector('.name').textContent = st.name;
-    btn.querySelector('.genre').textContent = st.genre;
+    btn.querySelector('.genre').textContent = blocked ? '公開ページでは聴けません' : st.genre;
+    if (blocked) {
+      btn.disabled = true;
+      btn.title = st.genre;
+    }
     btn.addEventListener('click', () => onStation(i));
     currentGroupEl.append(btn);
     stationButtons.push(btn);
