@@ -211,6 +211,24 @@
     text-align: right;
   }
 
+  /* 音質の切り替え(通常 / 低音質) */
+  .quality {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .quality-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+  }
+  .quality label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .quality input { accent-color: var(--lamp); width: 16px; height: 16px; margin: 0; cursor: pointer; }
+
   /* 音量を変えられない端末(iPhone・iPad) */
   .volume.fixed input[type="range"] { opacity: 0.35; }
   .volume.fixed input[type="range"]::-webkit-slider-thumb { cursor: not-allowed; }
@@ -343,6 +361,8 @@
   }
 
   .station .name { display: block; font-weight: 700; font-size: 0.95rem; }
+  .station .country { margin-left: 3px; font-weight: 400; font-size: 0.68rem; color: #4a4e56; white-space: nowrap; }
+  .station:disabled .country { color: #1c1d20; }
   .station .genre { display: block; font-size: 0.72rem; color: #4a4e56; margin-top: 2px; }
 
   /* ===== フッター ===== */
@@ -378,7 +398,7 @@
     <div class="display" role="status" aria-live="polite">
       <div class="display-top">
         <span id="channel">CH --</span>
-        <span><span class="tag" id="tagStereo">STEREO</span> <span class="tag" id="tagTuned">TUNED</span></span>
+        <span><span class="tag" id="tagLow">LOW</span> <span class="tag" id="tagStereo">STEREO</span> <span class="tag" id="tagTuned">TUNED</span></span>
       </div>
       <div class="station-name" id="stationName">POCHITTO RADIO</div>
       <div class="status" id="status">局を選んでください</div>
@@ -397,6 +417,12 @@
       </div>
     </div>
 
+    <div class="quality" role="radiogroup" aria-label="音質">
+      <span class="quality-label">QUALITY</span>
+      <label><input type="radio" name="quality" value="normal" checked> 通常</label>
+      <label><input type="radio" name="quality" value="low"> 低音質(データ節約)</label>
+    </div>
+
     <div id="groups"></div>
   </div>
 </div>
@@ -408,41 +434,61 @@
 <script>
   // ===== 局の一覧(docs/design/03-局の一覧.md と一致させる) =====
   // blockedOn: その局が再生を断る公開先のドメイン。そのドメインで開かれたときはボタンを押せなくする
+  // kbps: 通常の音質。low: 低音質(データ節約)の配信。ない局は低音質を選んでいても通常の音質で流す(docs/adr 0007)
   const STATIONS = [
-    { group: 'SomaFM', name: 'Groove Salad',   genre: 'アンビエント / ダウンテンポ', blockedOn: 'github.io', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
-    { group: 'SomaFM', name: 'Drone Zone',     genre: 'ビートのほぼない音響系',       blockedOn: 'github.io', url: 'https://ice2.somafm.com/dronezone-128-mp3' },
-    { group: 'SomaFM', name: 'Deep Space One', genre: 'スペース系の電子音楽',         blockedOn: 'github.io', url: 'https://ice4.somafm.com/deepspaceone-128-mp3' },
-    { group: 'SomaFM', name: 'Beat Blender',   genre: 'ハウス / ダウンテンポ',         blockedOn: 'github.io', url: 'https://ice6.somafm.com/beatblender-128-mp3' },
-    { group: 'SomaFM', name: 'The Trip',       genre: 'プログレッシブハウス / トランス', blockedOn: 'github.io', url: 'https://ice2.somafm.com/thetrip-128-mp3' },
-    { group: 'SomaFM', name: 'DEF CON Radio',  genre: '暗めでビートの強い電子音楽',     blockedOn: 'github.io', url: 'https://ice4.somafm.com/defcon-128-mp3' },
-    { group: 'SomaFM', name: 'cliqhop idm',    genre: 'IDM(電子音とビート中心)',       blockedOn: 'github.io', url: 'https://ice6.somafm.com/cliqhop-128-mp3' },
-    { group: 'SomaFM', name: 'Dub Step Beyond', genre: 'ダブステップ / 重低音系',        blockedOn: 'github.io', url: 'https://ice1.somafm.com/dubstep-128-mp3' },
-    { group: 'Radio Paradise', name: 'Main Mix',   genre: 'ロック・エレクトロニカ・ワールド', url: 'https://stream.radioparadise.com/mp3-192' },
-    { group: 'Radio Paradise', name: 'Mellow Mix', genre: '落ち着いた曲中心',               url: 'https://stream.radioparadise.com/mellow-192' },
-    { group: 'Radio Paradise', name: 'Rock Mix',   genre: 'ロック中心',                     url: 'https://stream.radioparadise.com/rock-192' },
-    { group: 'Radio Paradise', name: 'Global Mix', genre: 'ワールドミュージック中心',       url: 'https://stream.radioparadise.com/global-192' },
-    { group: 'KEXP', name: 'KEXP', genre: 'インディー / オルタナ', url: 'https://kexp.streamguys1.com/kexp160.aac' },
-    { group: 'FIP', name: 'FIP',        genre: 'ジャンル横断の選曲',       url: 'https://icecast.radiofrance.fr/fip-midfi.mp3' },
-    { group: 'FIP', name: 'FIP Jazz',   genre: 'ジャズ',                   url: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
-    { group: 'FIP', name: 'FIP Electro', genre: 'エレクトロ',              url: 'https://icecast.radiofrance.fr/fipelectro-midfi.mp3' },
-    { group: 'FIP', name: 'FIP World',  genre: 'ワールドミュージック',     url: 'https://icecast.radiofrance.fr/fipworld-midfi.mp3' },
-    { group: 'FIP', name: 'FIP Groove', genre: 'ファンク / ソウル / ヒップホップ', url: 'https://icecast.radiofrance.fr/fipgroove-midfi.mp3' },
-    { group: 'FIP', name: 'FIP Rock',   genre: 'ロック',                   url: 'https://icecast.radiofrance.fr/fiprock-midfi.mp3' },
-    { group: 'Radio Swiss', name: 'Swiss Jazz',    genre: 'ジャズ(トークほぼなし)',     url: 'https://stream.srg-ssr.ch/m/rsj/mp3_128' },
-    { group: 'Radio Swiss', name: 'Swiss Classic', genre: 'クラシック(トークほぼなし)', url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' },
-    { group: 'NTS', name: 'NTS 1', genre: 'DJ番組・クラブ系ほか', url: 'https://stream-relay-geo.ntslive.net/stream' },
-    { group: 'NTS', name: 'NTS 2', genre: 'DJ番組・クラブ系ほか', url: 'https://stream-relay-geo.ntslive.net/stream2' },
-    { group: 'Rinse FM', name: 'Rinse FM', genre: 'クラブミュージック', url: 'https://admin.stream.rinse.fm/proxy/rinse_uk/stream' },
-    { group: 'Intergalactic FM', name: 'Cybernetic Broadcasting', genre: 'エレクトロ / アンダーグラウンド', url: 'https://radio.intergalactic.fm/1' },
-    { group: 'Intergalactic FM', name: 'Disco Fetish',            genre: 'ディスコ / イタロ',               url: 'https://radio.intergalactic.fm/2' },
-    { group: 'Intergalactic FM', name: 'The Dream Machine',       genre: 'エレクトロニック',                url: 'https://radio.intergalactic.fm/3' },
+    { group: 'SomaFM', country: 'アメリカ', name: 'Groove Salad',   genre: 'アンビエント / ダウンテンポ', blockedOn: 'github.io', kbps: 128, url: 'https://ice1.somafm.com/groovesalad-128-mp3', low: { kbps: 64, url: 'https://ice1.somafm.com/groovesalad-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'Drone Zone',     genre: 'ビートのほぼない音響系',       blockedOn: 'github.io', kbps: 128, url: 'https://ice2.somafm.com/dronezone-128-mp3', low: { kbps: 64, url: 'https://ice2.somafm.com/dronezone-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'Deep Space One', genre: 'スペース系の電子音楽',         blockedOn: 'github.io', kbps: 128, url: 'https://ice4.somafm.com/deepspaceone-128-mp3', low: { kbps: 64, url: 'https://ice4.somafm.com/deepspaceone-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'Beat Blender',   genre: 'ハウス / ダウンテンポ',         blockedOn: 'github.io', kbps: 128, url: 'https://ice6.somafm.com/beatblender-128-mp3', low: { kbps: 64, url: 'https://ice6.somafm.com/beatblender-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'The Trip',       genre: 'プログレッシブハウス / トランス', blockedOn: 'github.io', kbps: 128, url: 'https://ice2.somafm.com/thetrip-128-mp3', low: { kbps: 64, url: 'https://ice2.somafm.com/thetrip-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'DEF CON Radio',  genre: '暗めでビートの強い電子音楽',     blockedOn: 'github.io', kbps: 128, url: 'https://ice4.somafm.com/defcon-128-mp3', low: { kbps: 64, url: 'https://ice4.somafm.com/defcon-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'cliqhop idm',    genre: 'IDM(電子音とビート中心)',       blockedOn: 'github.io', kbps: 128, url: 'https://ice6.somafm.com/cliqhop-128-mp3', low: { kbps: 64, url: 'https://ice6.somafm.com/cliqhop-64-aac' } },
+    { group: 'SomaFM', country: 'アメリカ', name: 'Dub Step Beyond', genre: 'ダブステップ / 重低音系',        blockedOn: 'github.io', kbps: 128, url: 'https://ice1.somafm.com/dubstep-128-mp3', low: { kbps: 64, url: 'https://ice1.somafm.com/dubstep-64-aac' } },
+    { group: 'Radio Paradise', country: 'アメリカ', name: 'Main Mix',   genre: 'ロック・エレクトロニカ・ワールド', kbps: 192, url: 'https://stream.radioparadise.com/mp3-192', low: { kbps: 64, url: 'https://stream.radioparadise.com/aac-64' } },
+    { group: 'Radio Paradise', country: 'アメリカ', name: 'Mellow Mix', genre: '落ち着いた曲中心',               kbps: 192, url: 'https://stream.radioparadise.com/mellow-192', low: { kbps: 64, url: 'https://stream.radioparadise.com/mellow-64' } },
+    { group: 'Radio Paradise', country: 'アメリカ', name: 'Rock Mix',   genre: 'ロック中心',                     kbps: 192, url: 'https://stream.radioparadise.com/rock-192', low: { kbps: 64, url: 'https://stream.radioparadise.com/rock-64' } },
+    { group: 'Radio Paradise', country: 'アメリカ', name: 'Global Mix', genre: 'ワールドミュージック中心',       kbps: 192, url: 'https://stream.radioparadise.com/global-192', low: { kbps: 64, url: 'https://stream.radioparadise.com/global-64' } },
+    { group: 'KEXP', country: 'アメリカ', name: 'KEXP', genre: 'インディー / オルタナ', kbps: 160, url: 'https://kexp.streamguys1.com/kexp160.aac', low: { kbps: 64, url: 'https://kexp.streamguys1.com/kexp64.aac' } },
+    { group: 'FIP', country: 'フランス', name: 'FIP',        genre: 'ジャンル横断の選曲',       kbps: 128, url: 'https://icecast.radiofrance.fr/fip-midfi.mp3', low: { kbps: 96, url: 'https://icecast.radiofrance.fr/fip-midfi.aac' } },
+    { group: 'FIP', country: 'フランス', name: 'FIP Jazz',   genre: 'ジャズ',                   kbps: 128, url: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
+    { group: 'FIP', country: 'フランス', name: 'FIP Electro', genre: 'エレクトロ',              kbps: 128, url: 'https://icecast.radiofrance.fr/fipelectro-midfi.mp3' },
+    { group: 'FIP', country: 'フランス', name: 'FIP World',  genre: 'ワールドミュージック',     kbps: 128, url: 'https://icecast.radiofrance.fr/fipworld-midfi.mp3' },
+    { group: 'FIP', country: 'フランス', name: 'FIP Groove', genre: 'ファンク / ソウル / ヒップホップ', kbps: 128, url: 'https://icecast.radiofrance.fr/fipgroove-midfi.mp3' },
+    { group: 'FIP', country: 'フランス', name: 'FIP Rock',   genre: 'ロック',                   kbps: 128, url: 'https://icecast.radiofrance.fr/fiprock-midfi.mp3' },
+    { group: 'Radio Swiss', country: 'スイス', name: 'Swiss Jazz',    genre: 'ジャズ(トークほぼなし)',     kbps: 128, url: 'https://stream.srg-ssr.ch/m/rsj/mp3_128', low: { kbps: 96, url: 'https://stream.srg-ssr.ch/m/rsj/aacp_96' } },
+    { group: 'Radio Swiss', country: 'スイス', name: 'Swiss Classic', genre: 'クラシック(トークほぼなし)', kbps: 128, url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128', low: { kbps: 96, url: 'https://stream.srg-ssr.ch/m/rsc_de/aacp_96' } },
+    { group: 'NTS', country: 'イギリス', name: 'NTS 1', genre: 'DJ番組・クラブ系ほか', kbps: 256, url: 'https://stream-relay-geo.ntslive.net/stream' },
+    { group: 'NTS', country: 'イギリス', name: 'NTS 2', genre: 'DJ番組・クラブ系ほか', kbps: 256, url: 'https://stream-relay-geo.ntslive.net/stream2' },
+    { group: 'Rinse FM', country: 'イギリス', name: 'Rinse FM', genre: 'クラブミュージック', kbps: 128, url: 'https://admin.stream.rinse.fm/proxy/rinse_uk/stream' },
+    { group: 'Intergalactic FM', country: 'オランダ', name: 'Cybernetic Broadcasting', genre: 'エレクトロ / アンダーグラウンド', kbps: 192, url: 'https://radio.intergalactic.fm/1' },
+    { group: 'Intergalactic FM', country: 'オランダ', name: 'Disco Fetish',            genre: 'ディスコ / イタロ',               kbps: 192, url: 'https://radio.intergalactic.fm/2' },
+    { group: 'Intergalactic FM', country: 'オランダ', name: 'The Dream Machine',       genre: 'エレクトロニック',                kbps: 192, url: 'https://radio.intergalactic.fm/3' },
+    { group: 'Techno', country: 'ドイツ',   name: 'Sunshine Live Techno',      genre: 'テクノ',                        kbps: 192, url: 'https://stream.sunshine-live.de/techno/mp3-192/stream.sunshine-live.de/', low: { kbps: 64, url: 'https://stream.sunshine-live.de/techno/aac-64/stream.sunshine-live.de/' } },
+    { group: 'Techno', country: 'イギリス', name: 'Techno.FM',                 genre: 'テクノ',                        kbps: 192, url: 'https://stream.techno.fm/radio.mp3' },
+    { group: 'Techno', country: 'スイス',   name: 'Traxx FM Tech Minimal',     genre: 'ミニマルテクノ / テックハウス', kbps: 128, url: 'https://traxx020.ice.infomaniak.ch/traxx020-low.mp3' },
+    { group: 'Techno', country: 'ドイツ',   name: 'Technolovers TECHNO',       genre: 'テクノ全般(ハード〜ミニマル)', kbps: 192, url: 'https://stream.technolovers.fm/techno' },
+    { group: 'Techno', country: 'ドイツ',   name: 'FluxFM Techno Underground', genre: 'アンダーグラウンド寄りのテクノ', kbps: 128, url: 'https://fluxfm.streamabc.net/flx-technounderground-mp3-128-7228171' },
+    { group: 'Techno', country: 'アメリカ', name: '181.FM Techno Club',        genre: 'クラブ向けテクノ',              kbps: 128, url: 'https://listen.181fm.com/181-technoclub_128k.mp3', low: { kbps: 64, url: 'https://listen.181fm.com/181-technoclub_64k.aac' } },
+    { group: 'Techno', country: 'ドイツ',   name: '90s90s Techno',             genre: '90年代のテクノ',                kbps: 192, url: 'https://streams.90s90s.de/techno/mp3-192/radiode/', low: { kbps: 64, url: 'https://streams.90s90s.de/techno/aac-64/radiode/' } },
   ];
 
   const $ = (id) => document.getElementById(id);
   const audio = $('audio');
 
   // status: idle(局未選択) / stopped / connecting / playing / error
-  const state = { index: -1, status: 'idle' };
+  // quality: normal / low(選んだ音質。ブラウザに保存する)
+  const state = { index: -1, status: 'idle', quality: 'normal' };
+
+  const QUALITY_KEY = 'dontokoi_pochitto_radio_quality_v1';
+  try {
+    if (localStorage.getItem(QUALITY_KEY) === 'low') state.quality = 'low';
+  } catch (e) { /* 保存できない環境では通常のまま */ }
+
+  // 選んだ音質で流す配信。低音質がない局は通常の配信を返す
+  function streamFor(st) {
+    if (state.quality === 'low' && st.low) return { url: st.low.url, kbps: st.low.kbps, low: true };
+    return { url: st.url, kbps: st.kbps, low: false };
+  }
 
   // ===== 局のボタンを作る =====
   // 開かれているドメインが blockedOn と一致する(またはそのサブドメイン)なら再生できない局とする
@@ -490,6 +536,10 @@
     btn.innerHTML = '<span class="lamp"></span><span class="ch"></span><span class="name"></span><span class="genre"></span>';
     btn.querySelector('.ch').textContent = 'CH' + String(i + 1).padStart(2, '0');
     btn.querySelector('.name').textContent = st.name;
+    const country = document.createElement('span');
+    country.className = 'country';
+    country.textContent = ' ' + st.country;
+    btn.querySelector('.name').append(country);
     btn.querySelector('.genre').textContent = blocked ? '公開ページでは聴けません' : st.genre;
     if (blocked) {
       btn.disabled = true;
@@ -504,14 +554,15 @@
   function play(index) {
     state.index = index;
     state.status = 'connecting';
-    audio.src = STATIONS[index].url;
+    const url = streamFor(STATIONS[index]).url;
+    audio.src = url;
     audio.volume = $('volume').value / 100;
     render();
     const p = audio.play();
     if (p) {
       p.catch((err) => {
-        // 別の局に切り替えたり停止したりして中断されたときは、エラーにしない
-        if (err.name === 'AbortError' || audio.getAttribute('src') !== STATIONS[index].url) return;
+        // 別の局・音質に切り替えたり停止したりして中断されたときは、エラーにしない
+        if (err.name === 'AbortError' || audio.getAttribute('src') !== url) return;
         state.status = 'error';
         render();
       });
@@ -537,6 +588,18 @@
     if (state.index < 0) return;
     if (state.status === 'connecting' || state.status === 'playing') stop();
     else play(state.index);
+  });
+
+  // 音質の切り替え。再生中なら選んだ音質でつなぎ直す
+  document.querySelectorAll('input[name="quality"]').forEach((radio) => {
+    radio.checked = radio.value === state.quality;
+    radio.addEventListener('change', () => {
+      if (!radio.checked) return;
+      state.quality = radio.value;
+      try { localStorage.setItem(QUALITY_KEY, state.quality); } catch (e) { /* 保存できなくても切り替えは効く */ }
+      if (state.status === 'connecting' || state.status === 'playing') play(state.index);
+      else render();
+    });
   });
 
   $('volume').addEventListener('input', (e) => {
@@ -583,18 +646,22 @@
 
     $('channel').textContent = st ? 'CH ' + String(state.index + 1).padStart(2, '0') : 'CH --';
     $('stationName').textContent = st ? st.name.toUpperCase() : 'POCHITTO RADIO';
-    $('stationName').title = st ? st.name + ' — ' + st.group : '';
+    $('stationName').title = st ? st.name + ' — ' + st.group + '(' + st.country + ')' : '';
 
     const statusEl = $('status');
     statusEl.classList.toggle('error', state.status === 'error');
+    // 再生中・接続中は音質も出す。低音質を選んでいても低音質のない局は「通常音質のみ」と知らせる
+    const s = st && streamFor(st);
+    const q = !s ? '' : (state.quality === 'low' && !s.low ? ' ・ 通常音質のみ ' : ' ・ ') + s.kbps + 'kbps';
     statusEl.textContent = {
       idle: '局を選んでください',
       stopped: st ? st.group + ' ・ 停止中' : '',
-      connecting: st ? st.group + ' ・ 接続中…' : '',
-      playing: st ? st.group + ' ・ 再生中' : '',
+      connecting: st ? st.group + ' ・ 接続中…' + q : '',
+      playing: st ? st.group + ' ・ 再生中' + q : '',
       error: 'この局は今は再生できません',
     }[state.status];
 
+    $('tagLow').classList.toggle('on', !!s && s.low && active);
     $('tagStereo').classList.toggle('on', state.status === 'playing');
     $('tagTuned').classList.toggle('on', active);
 
