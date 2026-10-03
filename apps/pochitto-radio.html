@@ -211,6 +211,20 @@
     text-align: right;
   }
 
+  /* 音量を変えられない端末(iPhone・iPad) */
+  .volume.fixed input[type="range"] { opacity: 0.35; }
+  .volume.fixed input[type="range"]::-webkit-slider-thumb { cursor: not-allowed; }
+  .volume.fixed output {
+    max-width: 7em;
+    width: auto;
+    font-family: inherit;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    text-align: left;
+    color: var(--text-dim);
+    text-shadow: none;
+  }
+
   /* つまみ風のスライダー */
   input[type="range"] {
     flex: 1;
@@ -300,7 +314,11 @@
     letter-spacing: 0.05em;
     text-transform: none;
     color: var(--lamp);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
+  .group h2 .note:hover { color: #ffb066; }
+  .group h2 .note:focus-visible { outline: 2px solid var(--fl); outline-offset: 2px; }
   .station:focus-visible, .power:focus-visible { outline: 2px solid var(--fl); outline-offset: 3px; }
 
   .station .lamp {
@@ -431,6 +449,9 @@
 
   const stationButtons = [];
   const groupsEl = $('groups');
+  // ブラウザの「名前を付けて保存」で保存したファイルには、作ったあとのボタンが残っている。
+  // 二重にならないよう、いったん空にしてから作り直す(レベルメーターも同じ)
+  groupsEl.textContent = '';
   let currentGroupEl = null;
   STATIONS.forEach((st, i) => {
     const blocked = isBlocked(st);
@@ -449,8 +470,11 @@
     if (blocked) {
       const h2 = currentGroupEl.previousElementSibling;
       if (!h2.querySelector('.note')) {
-        const note = document.createElement('span');
+        // 公開ページと同じ場所にある元の HTML をダウンロードさせる(同じドメインなので download 属性が効く)
+        const note = document.createElement('a');
         note.className = 'note';
+        note.href = location.href.split(/[?#]/)[0];
+        note.download = 'pochitto-radio.html';
         note.textContent = 'ファイルをダウンロードして開くと聴けます';
         h2.append(note);
       }
@@ -516,6 +540,19 @@
     $('volumeValue').textContent = e.target.value;
   });
 
+  // iPhone・iPad ではどのブラウザでもページから音量を変えられない(volume を設定しても 1 のまま)。
+  // ブラウザ名ではなく、実際に変わるかを試して判断する(docs/adr 0006)
+  const canSetVolume = (() => {
+    const probe = document.createElement('audio');
+    probe.volume = 0.5;
+    return Math.abs(probe.volume - 0.5) < 0.01;
+  })();
+  if (!canSetVolume) {
+    $('volume').disabled = true;
+    $('volume').closest('.volume').classList.add('fixed');
+    $('volumeValue').textContent = '音量は本体のボタンで調整';
+  }
+
   audio.addEventListener('playing', () => {
     if (!audio.getAttribute('src')) return;
     state.status = 'playing';
@@ -574,6 +611,7 @@
   const BARS = 24;
   const SEGS = 8;
   const meterEl = $('meter');
+  meterEl.textContent = '';
   meterEl.style.setProperty('--bars', BARS);
   const segs = [];
   for (let b = 0; b < BARS; b++) {
