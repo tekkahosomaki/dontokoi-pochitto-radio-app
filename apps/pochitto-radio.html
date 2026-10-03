@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="どんと来い!ガジェットラボ">
+<meta name="color-scheme" content="dark">
+<title>ポチッとラジオ</title>
+<style>
+  /* ===== 色・寸法 ===== */
+  :root {
+    --bg: #0b0b0d;
+    --panel-1: #2a2b2f;
+    --panel-2: #17181b;
+    --silver-1: #f2f3f5;
+    --silver-2: #b9bcc3;
+    --silver-3: #7d8189;
+    --text: #d9dbe0;
+    --text-dim: #8b8f98;
+    --fl: #5ff5d8;          /* 蛍光表示管の青緑 */
+    --fl-dim: #1d4a43;
+    --fl-glow: rgba(95, 245, 216, 0.55);
+    --lamp: #ff8a1f;        /* 再生中ランプの橙 */
+    --lamp-glow: rgba(255, 138, 31, 0.7);
+    --error: #ff6b5e;
+    --mono: "Consolas", "Menlo", "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #1c1d21 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  /* ===== 本体パネル ===== */
+  .unit {
+    width: 100%;
+    max-width: 760px;
+    border-radius: 10px;
+    padding: 6px;
+    background: linear-gradient(180deg, var(--silver-2), var(--silver-3) 50%, var(--silver-2));
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+  }
+
+  .panel {
+    border-radius: 6px;
+    padding: 18px 20px 20px;
+    /* ヘアライン(細い横筋)の金属パネル */
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, var(--panel-1), var(--panel-2));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 6px rgba(0,0,0,0.6);
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    font-style: italic;
+    background: linear-gradient(180deg, var(--silver-1), var(--silver-3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .brand .model {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* ===== 表示部(蛍光表示管風) ===== */
+  .display {
+    background: #050607;
+    border-radius: 6px;
+    padding: 14px 16px 12px;
+    border: 1px solid #000;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.08);
+    font-family: var(--mono);
+    color: var(--fl);
+    text-shadow: 0 0 6px var(--fl-glow);
+  }
+
+  .display-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+  }
+
+  .tag { color: var(--fl-dim); text-shadow: none; }
+  .tag.on { color: var(--fl); text-shadow: 0 0 6px var(--fl-glow); }
+
+  .station-name {
+    margin: 8px 0 2px;
+    font-size: 1.6rem;
+    letter-spacing: 0.06em;
+    min-height: 2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .status {
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    min-height: 1.2rem;
+  }
+
+  .status.error { color: var(--error); text-shadow: 0 0 6px rgba(255,107,94,0.5); }
+
+  /* レベルメーター(飾り) */
+  .meter {
+    display: grid;
+    grid-template-columns: repeat(var(--bars), 1fr);
+    gap: 3px;
+    height: 42px;
+    margin-top: 10px;
+  }
+
+  .bar {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+
+  .seg {
+    flex: 1;
+    border-radius: 1px;
+    background: var(--fl-dim);
+    opacity: 0.35;
+  }
+
+  .seg.lit { background: var(--fl); opacity: 1; box-shadow: 0 0 4px var(--fl-glow); }
+  .seg.lit.peak { background: var(--lamp); box-shadow: 0 0 4px var(--lamp-glow); }
+
+  /* ===== 操作部 ===== */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 18px 0 6px;
+    flex-wrap: wrap;
+  }
+
+  .power {
+    flex: none;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border: 2px solid #0d0d0f;
+    background: radial-gradient(circle at 35% 30%, var(--silver-1), var(--silver-2) 45%, var(--silver-3));
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 -3px 6px rgba(0,0,0,0.3);
+    color: #222;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .power:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 5px rgba(0,0,0,0.6); }
+  .power:disabled { opacity: 0.45; cursor: default; }
+
+  .power .icon { font-size: 1.3rem; line-height: 1; }
+
+  .volume {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .volume label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+  }
+
+  .volume output {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--fl);
+    text-shadow: 0 0 6px var(--fl-glow);
+    width: 2.5em;
+    text-align: right;
+  }
+
+  /* つまみ風のスライダー */
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: #050607;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.08);
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #0d0d0f;
+    background:
+      repeating-conic-gradient(rgba(0,0,0,0.18) 0 4deg, transparent 4deg 10deg),
+      radial-gradient(circle at 35% 30%, var(--silver-1), var(--silver-3));
+    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    cursor: pointer;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #0d0d0f;
+    background:
+      repeating-conic-gradient(rgba(0,0,0,0.18) 0 4deg, transparent 4deg 10deg),
+      radial-gradient(circle at 35% 30%, var(--silver-1), var(--silver-3));
+    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    cursor: pointer;
+  }
+
+  input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--fl); outline-offset: 2px; }
+
+  /* ===== 局のボタン ===== */
+  .group { margin-top: 18px; }
+
+  .group h2 {
+    margin: 0 0 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .stations {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .station {
+    position: relative;
+    text-align: left;
+    padding: 18px 12px 10px;
+    border-radius: 5px;
+    border: 1px solid #0d0d0f;
+    background: linear-gradient(180deg, #e9eaed, var(--silver-2) 60%, #9a9ea6);
+    box-shadow: 0 3px 0 #4a4d53, 0 5px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8);
+    color: #1b1c1f;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .station:active { transform: translateY(2px); box-shadow: 0 1px 0 #4a4d53, 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8); }
+  .station:focus-visible, .power:focus-visible { outline: 2px solid var(--fl); outline-offset: 3px; }
+
+  .station .lamp {
+    position: absolute;
+    top: 7px;
+    left: 12px;
+    width: 18px;
+    height: 4px;
+    border-radius: 2px;
+    background: #4a3420;
+  }
+
+  .station[aria-pressed="true"] .lamp { background: var(--lamp); box-shadow: 0 0 8px var(--lamp-glow); }
+
+  .station .ch {
+    position: absolute;
+    top: 4px;
+    right: 10px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: #555a62;
+  }
+
+  .station .name { display: block; font-weight: 700; font-size: 0.95rem; }
+  .station .genre { display: block; font-size: 0.72rem; color: #4a4e56; margin-top: 2px; }
+
+  /* ===== フッター ===== */
+  footer {
+    margin-top: 20px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 480px) {
+    .panel { padding: 14px 12px 16px; }
+    .brand h1 { font-size: 1.15rem; white-space: nowrap; }
+    .brand .model { font-size: 0.6rem; letter-spacing: 0.15em; }
+    .controls { gap: 12px; flex-wrap: nowrap; }
+    .volume { gap: 8px; }
+    .volume label { display: none; }
+    .station-name { font-size: 1.25rem; }
+    .stations { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="unit">
+  <div class="panel">
+    <div class="brand">
+      <h1>Pochitto Radio</h1>
+      <span class="model">STEREO NET TUNER</span>
+    </div>
+
+    <div class="display" role="status" aria-live="polite">
+      <div class="display-top">
+        <span id="channel">CH --</span>
+        <span><span class="tag" id="tagStereo">STEREO</span> <span class="tag" id="tagTuned">TUNED</span></span>
+      </div>
+      <div class="station-name" id="stationName">POCHITTO RADIO</div>
+      <div class="status" id="status">局を選んでください</div>
+      <div class="meter" id="meter" aria-hidden="true"></div>
+    </div>
+
+    <div class="controls">
+      <button class="power" id="power" type="button" disabled aria-label="再生">
+        <span class="icon" id="powerIcon">▶</span>
+        <span id="powerLabel">PLAY</span>
+      </button>
+      <div class="volume">
+        <label for="volume">VOLUME</label>
+        <input type="range" id="volume" min="0" max="100" value="70" aria-label="音量">
+        <output id="volumeValue" for="volume">70</output>
+      </div>
+    </div>
+
+    <div id="groups"></div>
+  </div>
+</div>
+
+<footer>どんと来い!ガジェットラボ</footer>
+
+<audio id="audio" preload="none"></audio>
+
+<script>
+  // ===== 局の一覧(docs/design/03-局の一覧.md と一致させる) =====
+  const STATIONS = [
+    { group: 'SomaFM', name: 'Groove Salad',   genre: 'アンビエント / ダウンテンポ', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
+    { group: 'SomaFM', name: 'Drone Zone',     genre: 'ビートのほぼない音響系',       url: 'https://ice2.somafm.com/dronezone-128-mp3' },
+    { group: 'SomaFM', name: 'Deep Space One', genre: 'スペース系の電子音楽',         url: 'https://ice4.somafm.com/deepspaceone-128-mp3' },
+    { group: 'SomaFM', name: 'Beat Blender',   genre: 'ハウス / ダウンテンポ',         url: 'https://ice6.somafm.com/beatblender-128-mp3' },
+    { group: 'Radio Paradise', name: 'Main Mix',   genre: 'ロック・エレクトロニカ・ワールド', url: 'https://stream.radioparadise.com/mp3-192' },
+    { group: 'Radio Paradise', name: 'Mellow Mix', genre: '落ち着いた曲中心',               url: 'https://stream.radioparadise.com/mellow-192' },
+    { group: 'Radio Paradise', name: 'Rock Mix',   genre: 'ロック中心',                     url: 'https://stream.radioparadise.com/rock-192' },
+    { group: 'Radio Paradise', name: 'Global Mix', genre: 'ワールドミュージック中心',       url: 'https://stream.radioparadise.com/global-192' },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const audio = $('audio');
+
+  // status: idle(局未選択) / stopped / connecting / playing / error
+  const state = { index: -1, status: 'idle' };
+
+  // ===== 局のボタンを作る =====
+  const stationButtons = [];
+  const groupsEl = $('groups');
+  let currentGroupEl = null;
+  STATIONS.forEach((st, i) => {
+    if (!currentGroupEl || currentGroupEl.dataset.group !== st.group) {
+      const section = document.createElement('section');
+      section.className = 'group';
+      section.dataset.group = st.group;
+      const h2 = document.createElement('h2');
+      h2.textContent = st.group;
+      currentGroupEl = document.createElement('div');
+      currentGroupEl.className = 'stations';
+      currentGroupEl.dataset.group = st.group;
+      section.append(h2, currentGroupEl);
+      groupsEl.append(section);
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'station';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.innerHTML = '<span class="lamp"></span><span class="ch"></span><span class="name"></span><span class="genre"></span>';
+    btn.querySelector('.ch').textContent = 'CH' + String(i + 1).padStart(2, '0');
+    btn.querySelector('.name').textContent = st.name;
+    btn.querySelector('.genre').textContent = st.genre;
+    btn.addEventListener('click', () => onStation(i));
+    currentGroupEl.append(btn);
+    stationButtons.push(btn);
+  });
+
+  // ===== 再生・停止(docs/adr 0004) =====
+  function play(index) {
+    state.index = index;
+    state.status = 'connecting';
+    audio.src = STATIONS[index].url;
+    audio.volume = $('volume').value / 100;
+    render();
+    const p = audio.play();
+    if (p) {
+      p.catch((err) => {
+        // 別の局に切り替えたり停止したりして中断されたときは、エラーにしない
+        if (err.name === 'AbortError' || audio.getAttribute('src') !== STATIONS[index].url) return;
+        state.status = 'error';
+        render();
+      });
+    }
+  }
+
+  function stop() {
+    audio.pause();
+    // src を外して受信を止める(そのままだと裏で受信を続ける)
+    audio.removeAttribute('src');
+    audio.load();
+    state.status = 'stopped';
+    render();
+  }
+
+  function onStation(index) {
+    const active = state.status === 'connecting' || state.status === 'playing';
+    if (index === state.index && active) stop();
+    else play(index);
+  }
+
+  $('power').addEventListener('click', () => {
+    if (state.index < 0) return;
+    if (state.status === 'connecting' || state.status === 'playing') stop();
+    else play(state.index);
+  });
+
+  $('volume').addEventListener('input', (e) => {
+    audio.volume = e.target.value / 100;
+    $('volumeValue').textContent = e.target.value;
+  });
+
+  audio.addEventListener('playing', () => {
+    if (!audio.getAttribute('src')) return;
+    state.status = 'playing';
+    render();
+  });
+
+  audio.addEventListener('waiting', () => {
+    if (!audio.getAttribute('src') || state.status !== 'playing') return;
+    state.status = 'connecting';
+    render();
+  });
+
+  audio.addEventListener('error', () => {
+    // 停止で src を外したときの error は無視する
+    if (!audio.getAttribute('src')) return;
+    state.status = 'error';
+    render();
+  });
+
+  // ===== 画面の更新 =====
+  function render() {
+    const st = STATIONS[state.index];
+    const active = state.status === 'connecting' || state.status === 'playing';
+
+    $('channel').textContent = st ? 'CH ' + String(state.index + 1).padStart(2, '0') : 'CH --';
+    $('stationName').textContent = st ? st.name.toUpperCase() : 'POCHITTO RADIO';
+    $('stationName').title = st ? st.name + ' — ' + st.group : '';
+
+    const statusEl = $('status');
+    statusEl.classList.toggle('error', state.status === 'error');
+    statusEl.textContent = {
+      idle: '局を選んでください',
+      stopped: st ? st.group + ' ・ 停止中' : '',
+      connecting: st ? st.group + ' ・ 接続中…' : '',
+      playing: st ? st.group + ' ・ 再生中' : '',
+      error: 'この局は今は再生できません',
+    }[state.status];
+
+    $('tagStereo').classList.toggle('on', state.status === 'playing');
+    $('tagTuned').classList.toggle('on', active);
+
+    stationButtons.forEach((btn, i) => {
+      btn.setAttribute('aria-pressed', String(i === state.index && active));
+    });
+
+    const power = $('power');
+    power.disabled = state.index < 0;
+    $('powerIcon').textContent = active ? '■' : '▶';
+    $('powerLabel').textContent = active ? 'STOP' : 'PLAY';
+    power.setAttribute('aria-label', active ? '停止' : '再生');
+
+    document.title = state.status === 'playing' && st ? '▶ ' + st.name + ' — ポチッとラジオ' : 'ポチッとラジオ';
+  }
+
+  // ===== レベルメーター(飾り。音声には連動しない) =====
+  const BARS = 24;
+  const SEGS = 8;
+  const meterEl = $('meter');
+  meterEl.style.setProperty('--bars', BARS);
+  const segs = [];
+  for (let b = 0; b < BARS; b++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const col = [];
+    for (let s = 0; s < SEGS; s++) {
+      const seg = document.createElement('div');
+      seg.className = 'seg' + (s === SEGS - 1 ? ' peak' : '');
+      bar.append(seg);
+      col.push(seg);
+    }
+    meterEl.append(bar);
+    segs.push(col);
+  }
+
+  const levels = new Array(BARS).fill(0);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let lastFrame = 0;
+
+  function animateMeter(t) {
+    requestAnimationFrame(animateMeter);
+    if (t - lastFrame < (reduceMotion ? 400 : 70)) return;
+    lastFrame = t;
+    const on = state.status === 'playing';
+    for (let b = 0; b < BARS; b++) {
+      let target = 0;
+      if (on) {
+        // 低い音ほど高く、ゆらぎを付けた目標値に近づける
+        const base = 0.75 - (b / BARS) * 0.35;
+        target = Math.max(0, Math.min(1, base * (0.55 + Math.random() * 0.6) + Math.sin(t / 900 + b * 0.5) * 0.08));
+      }
+      levels[b] += (target - levels[b]) * (target > levels[b] ? 0.7 : 0.3);
+      const lit = Math.round(levels[b] * SEGS);
+      for (let s = 0; s < SEGS; s++) segs[b][s].classList.toggle('lit', s < lit);
+    }
+  }
+  requestAnimationFrame(animateMeter);
+
+  render();
+</script>
+</body>
+</html>
