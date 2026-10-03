@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="author" content="どんと来い!ガジェットラボ">
+<meta name="author" content="どんと来い！ガジェットラボ">
 <meta name="color-scheme" content="dark">
 <title>ポチッとラジオ</title>
 <style>
@@ -318,6 +318,7 @@
 
   @media (max-width: 480px) {
     .panel { padding: 14px 12px 16px; }
+    .brand { flex-wrap: wrap; row-gap: 2px; }
     .brand h1 { font-size: 1.15rem; white-space: nowrap; }
     .brand .model { font-size: 0.6rem; letter-spacing: 0.15em; }
     .controls { gap: 12px; flex-wrap: nowrap; }
@@ -333,7 +334,7 @@
 <div class="unit">
   <div class="panel">
     <div class="brand">
-      <h1>Pochitto Radio</h1>
+      <h1>どんと来い！ポチッとラジオ</h1>
       <span class="model">STEREO NET TUNER</span>
     </div>
 
@@ -363,7 +364,7 @@
   </div>
 </div>
 
-<footer>どんと来い!ガジェットラボ</footer>
+<footer>どんと来い！ガジェットラボ</footer>
 
 <audio id="audio" preload="none"></audio>
 
@@ -378,6 +379,21 @@
     { group: 'Radio Paradise', name: 'Mellow Mix', genre: '落ち着いた曲中心',               url: 'https://stream.radioparadise.com/mellow-192' },
     { group: 'Radio Paradise', name: 'Rock Mix',   genre: 'ロック中心',                     url: 'https://stream.radioparadise.com/rock-192' },
     { group: 'Radio Paradise', name: 'Global Mix', genre: 'ワールドミュージック中心',       url: 'https://stream.radioparadise.com/global-192' },
+    { group: 'KEXP', name: 'KEXP', genre: 'インディー / オルタナ', url: 'https://kexp.streamguys1.com/kexp160.aac' },
+    { group: 'FIP', name: 'FIP',        genre: 'ジャンル横断の選曲',       url: 'https://icecast.radiofrance.fr/fip-midfi.mp3' },
+    { group: 'FIP', name: 'FIP Jazz',   genre: 'ジャズ',                   url: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
+    { group: 'FIP', name: 'FIP Electro', genre: 'エレクトロ',              url: 'https://icecast.radiofrance.fr/fipelectro-midfi.mp3' },
+    { group: 'FIP', name: 'FIP World',  genre: 'ワールドミュージック',     url: 'https://icecast.radiofrance.fr/fipworld-midfi.mp3' },
+    { group: 'FIP', name: 'FIP Groove', genre: 'ファンク / ソウル / ヒップホップ', url: 'https://icecast.radiofrance.fr/fipgroove-midfi.mp3' },
+    { group: 'FIP', name: 'FIP Rock',   genre: 'ロック',                   url: 'https://icecast.radiofrance.fr/fiprock-midfi.mp3' },
+    { group: 'Radio Swiss', name: 'Swiss Jazz',    genre: 'ジャズ(トークほぼなし)',     url: 'https://stream.srg-ssr.ch/m/rsj/mp3_128' },
+    { group: 'Radio Swiss', name: 'Swiss Classic', genre: 'クラシック(トークほぼなし)', url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' },
+    { group: 'NTS', name: 'NTS 1', genre: 'DJ番組・クラブ系ほか', url: 'https://stream-relay-geo.ntslive.net/stream' },
+    { group: 'NTS', name: 'NTS 2', genre: 'DJ番組・クラブ系ほか', url: 'https://stream-relay-geo.ntslive.net/stream2' },
+    { group: 'Rinse FM', name: 'Rinse FM', genre: 'クラブミュージック', url: 'https://admin.stream.rinse.fm/proxy/rinse_uk/stream' },
+    { group: 'Intergalactic FM', name: 'Cybernetic Broadcasting', genre: 'エレクトロ / アンダーグラウンド', url: 'https://radio.intergalactic.fm/1' },
+    { group: 'Intergalactic FM', name: 'Disco Fetish',            genre: 'ディスコ / イタロ',               url: 'https://radio.intergalactic.fm/2' },
+    { group: 'Intergalactic FM', name: 'The Dream Machine',       genre: 'エレクトロニック',                url: 'https://radio.intergalactic.fm/3' },
   ];
 
   const $ = (id) => document.getElementById(id);

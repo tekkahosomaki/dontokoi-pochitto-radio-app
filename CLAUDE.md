@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-「ポチッとラジオ」(`dontokoi-pochitto-radio-app`, credited to 「どんと来い!ガジェットラボ」) — an internet radio player that runs in the browser from a single HTML file, `apps/pochitto-radio.html`. Version 1 plays 8 hard-coded stations (SomaFM ×4, Radio Paradise ×4) with play/stop, volume, now-playing and error display. It is published as a Claude artifact. The full spec is `docs/design/02-画面と操作.md`; the station list with stream URLs is `docs/design/03-局の一覧.md`.
+「ポチッとラジオ」(`dontokoi-pochitto-radio-app`, credited to 「どんと来い！ガジェットラボ」) — an internet radio player that runs in the browser from a single HTML file, `apps/pochitto-radio.html`. The on-screen title is 「どんと来い！ポチッとラジオ」. Version 1 plays 24 hard-coded stations (SomaFM, Radio Paradise, KEXP, FIP, Radio Swiss, NTS, Rinse FM, Intergalactic FM; `STATIONS` in the HTML) with play/stop, volume, now-playing and error display. It is published as a Claude artifact. The full spec is `docs/design/02-画面と操作.md`; the station list with stream URLs is `docs/design/03-局の一覧.md`.
 
 Playback is a single `<audio>` element: set `src` to the stream URL and `play()` (`docs/adr` 0004). Stop = `pause()` and clear `src` so the stream stops downloading; resuming re-sets the URL and plays live. Don't route audio through Web Audio API (CORS varies by station).
 
