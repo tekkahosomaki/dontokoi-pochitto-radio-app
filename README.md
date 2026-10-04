@@ -2,7 +2,7 @@
 
 ポチッとラジオ — ブラウザで動くネットラジオプレーヤー。HTMLファイル1つで動きます(インストール不要)。
 
-SomaFM・Radio Paradise・KEXP・FIP など海外ネットラジオの70局を、ボタンをポチッと押すだけで聴けます。
+SomaFM・Radio Paradise・KEXP・FIP など海外ネットラジオの98局を、ボタンをポチッと押すだけで聴けます。
 
 - 公開ページ: https://tekkahosomaki.github.io/dontokoi-pochitto-radio-app/apps/pochitto-radio.html (SomaFM の12局は公開ページでは聴けません。聴くときはファイルをダウンロードしてダブルクリックで開いてください)
 - アプリ本体: [apps/pochitto-radio.html](apps/pochitto-radio.html)
